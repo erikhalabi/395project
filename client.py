@@ -29,6 +29,11 @@ def decry(message, key):
 
         return decryMessage
 
+def encryRSA(message, clientName):
+    filename = clientName+"_public.pem"
+    f=open(filename, "rb")
+    for line in f:
+        print(line)
 
 def client():
     # Server Information
@@ -51,7 +56,7 @@ def client():
         print(welcomeMessage.decode('ascii'))
 
         #Client sends name to server
-        clientName = input("Enter your client name:").encode('ascii' 
+        clientName = input("Enter your client name:").encode('ascii')
         clientSocket.send(clientName)
         
         # Client terminate connection with the server
@@ -63,5 +68,6 @@ def client():
         sys.exit(1)
 
 #----------
-client()
+#client()
+encryRSA("hello", "client1")
 
