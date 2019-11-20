@@ -5,6 +5,9 @@ import os
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Random import get_random_bytes
+from Crypto.Publickey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+
 
 #This function takes a string as parameter
 #and returns an encrypted version of the string.
@@ -89,7 +92,8 @@ socket.SOCK_STREAM)
                 connectionSocket.send(("Welcome to the system\nWhat is your name?").encode('ascii'))
                 
                 #server receives name and check if name is valid.
-                clientName = (connectionSocket.recv(2048)).decode('ascii')
+                clientName = connectionSocket.recv(2048)
+                clientName = decryRSA(clientName, "server")
                 print("Name is", clientName)
                 
 

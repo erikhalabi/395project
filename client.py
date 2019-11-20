@@ -2,6 +2,8 @@ import socket
 import sys
 
 from Crypto.Cipher import AES
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
 
@@ -29,6 +31,36 @@ def decry(message, key):
 
         return decryMessage
 
+#This is the RSA encrypting function, using the public key
+#It takes 2 parameters: The message to be encrypted
+# and the client name(or server) and it gets the key from the 
+# required .pem file.
+#The encrypted message is then encoded.
+#It returns the encoded message.
+def encryRSA(message, clientName):
+    filename = clientName+"_public.pem"
+    f=open(filename, "rb")
+    public_key = f.read()
+    pubkey = RSA.import_key(public_key)
+    cipher_rsa_en = PKCS1_OAEP.new(pubkey)
+    enc_data = cipher_rsa_en.encrypt(message.encode('ascii'))
+    
+    return enc_data
+
+#This is the RSA encrypting function, using private key.
+#It takes 2 parameters: The message to be decrypted
+# and the client name(or server) and it gets the key from the
+# required .pem file.
+#The message is decoded and then decrypted.
+#It returns the decrypted message.
+def decryRSA(message, clientName):
+    filename = clientName+"_private.pem"
+    f = open(filename, "rb")
+    private_key = f.read()
+    priv_key = RSA.import_key(private_key)
+    cipher_rsa_dec = PKCS1_OAEP.new(priv_key)
+    dec_data = cipher_rsa_dec.decrypt(message)
+    print(dec_data.decode('ascii'))
 
 def client():
     # Server Information
@@ -51,9 +83,13 @@ def client():
         print(welcomeMessage.decode('ascii'))
 
         #Client sends name to server
-        clientName = input("Enter your client name:").encode('ascii' 
+        clientName = input("Enter your client name:")
+        clientName = encryRSA(clientName, "server")
         clientSocket.send(clientName)
         
+
+
+
         # Client terminate connection with the server
         clientSocket.close()
         
@@ -64,4 +100,5 @@ def client():
 
 #----------
 client()
+
 
