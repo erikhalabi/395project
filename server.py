@@ -17,7 +17,6 @@ def encryAES(message, key):
 
 	#Encrypt the message
         ct_bytes = cipher.encrypt(pad(message.encode('ascii'),16))
-        print("The encrypted message:", ct_bytes)
 	
         return ct_bytes
 
@@ -149,7 +148,7 @@ socket.SOCK_STREAM)
                 #Server receives filename.
                 filenameEncry = connectionSocket.recv(2048)
                 filename=decryAES(filenameEncry, sym_key)
-                print("filename is", filename)
+                print("The server received the file name", filename,"from client:",clientNameDecry)
 
                 connectionSocke.close()
                 
