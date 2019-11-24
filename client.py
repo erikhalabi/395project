@@ -24,6 +24,20 @@ def encryAES(message, key):
         
         return ct_bytes
 
+# Description: This will encrypt the file since the file is already encoded in bytes
+# Parameters: the file contents and the key
+# Return: The encypted file contents 
+def encryptFile(data, key):
+
+	# Generate Cyphering Block
+        cipher = AES.new(key, AES.MODE_ECB)
+
+	# Encrypt the message
+        ct_bytes = cipher.encrypt(pad(data, 16))
+        
+        return ct_bytes
+
+
 def decryAES(message, key):
 	# Generate ciphering
         cipher = AES.new(key, AES.MODE_ECB)
@@ -67,15 +81,15 @@ def decryRSA(message, clientName):
         #return dec_data.decode('ascii')
         return dec_data
 
-# This function will open a file and read all of its contents, close it
-# and return it 
+# Description: It will get a file, read it in binary, then close it 
+# Parameters: File name to get as string
+# Return: The file contents 
 def getFile(fileName):
         f = open(fileName, "rb")
         data = f.read()
         f.close()
         return data
-        
-
+       
 def client():
 
         # Ask for the nerver to connnect to
@@ -111,9 +125,9 @@ def client():
                 # appropriate notice and connection will be terminated.
                 message = clientSocket.recv(2048).decode('ascii')
                 if (message == "Invalid clientName"):
-                    print("Invalid client name.\nTerminating.")
-                    clientSocket.close()
-                    return
+                        print("Invalid client name.\nTerminating.")
+                        clientSocket.close()
+                        return
 
                 # Otherwise we continue with our program.
                 # The client receives the encrypted  sym_key form the server 
@@ -138,30 +152,41 @@ def client():
                 fileSizeReq = decryAES(encryptedFileSizeReq, sym_key)
                 print(fileSizeReq)
 
-                # call getFile function to get the file
+                # Call getFile function to read in the file
                 data = getFile(fileName)
-
+                
                 # Send the file size to the server 
                 fileSize = len(data)
-                print(fileSize)
                 clientSocket.send(encryAES(str(fileSize), sym_key))
 
                 # Get message from server on whether file is too big or not
                 encryptedSizeMsg = clientSocket.recv(2048)
                 sizeMsg = decryAES(encryptedSizeMsg, sym_key)
+                print(sizeMsg)
 
-                # Send File to server 
-                connectionSocket.send(encryAES(data, sym_key)) 
+                # Close the connection if the file size is too large 
+                if (sizeMsg == "The file size is too large.\nTerminating"):
+                        clientSocket.close()
+                        return
+
+                # Send File to server
+                print("Sending the file contents to server.")
+                clientSocket.send(encryptFile(data, sym_key))
+
+                # Get the confirmation message and print it 
+                encryptedConfirmation = clientSocket.recv(2048)
+                confirmation = decryAES(encryptedConfirmation, sym_key)
+                print(confirmation)
                 
                 # Client terminate connection with the server
                 clientSocket.close()
 
         except socket.error as e:
-                print('An error occured:',e)
+                print('An error occured:', e)
                 clientSocket.close()
                 sys.exit(1)
 
-#----------
+#---------------
 client()
 
 
