@@ -131,9 +131,6 @@ def server():
                                 #Those allowed clients are kept in a list called validList.
                                 validList = ["client1", "client2", "client3"]
 
-                                #Server send welcome message to client, and asked for name.
-                                #connectionSocket.send(("Enter client name: ").encode('ascii'))
-
                                 #server receives name and check if name is valid.
                                 clientName = connectionSocket.recv(2048)
                                 clientNameDecry = decryRSA(clientName, "server")
@@ -177,8 +174,6 @@ def server():
                                 # Receive encrypted file size from client and decode it
                                 encryptedFileSize = connectionSocket.recv(2048)
                                 fileSize = decryAES(encryptedFileSize, sym_key)
-                                # Converts it to an interger 
-                                #fileSize = int(fileSize)
                                 
                                 # When the message size is larger than the limit send a message to the client and close
                                 # the connection, when file is not too big recieve all of it, decode it, and save it
@@ -210,7 +205,6 @@ def server():
                                         
                                         # If there is anymore data to get collect it and write it to the file   
                                         while (length < int(fileSize)):
-                                                print(data) 
                                                 encryptedData = connectionSocket.recv(2048)
                                                 data = decryptFile(encryptedData, sym_key)
                                                 f.write(data) # Write to the file
