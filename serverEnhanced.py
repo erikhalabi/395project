@@ -241,7 +241,7 @@ def server():
                     length = len(data)
 
                     # Open file for writing and write the data to it
-                    f = open(filename, "wb")
+                    f = open(fileNameDecryArr[0], "wb")
                     f.write(data)
 
                     # If there is anymore data to get collect it and write it to the file
