@@ -1,0 +1,7 @@
+    The security aspect im going to focus on is a man in the middle attack. The way this attack works is a third party
+can act as the server and the client, and receive both sides of the contents. They can then modify and/or add malware,
+which is eventually sent to its proper destination. Te defend against this, both parties share a master key with each
+other and derive 2 keys and 2 hashes that will be used in future exchanges. When a message is sent, it is accompanied
+by a hash value, which is only obtained through a key. So when the message is exchanged, if the contents are modified,
+the receiving side will be able to check against the attached hash value and compare it to the value that they got. If
+the values are different, there has been an attack, if not, then this is the message the sender expected.
