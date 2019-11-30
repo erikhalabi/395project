@@ -87,11 +87,12 @@ def decryRSA(message, clientName):
 # Description: It will get a file, read it in binary, then close it
 # Parameters: File name to get as string
 # Return: The file contents 
-def getFile(fileName):
-    f = open(fileName, "rb")
+def getFileSize(fileName):
+    f = open(fileName, "r")
     data = f.read()
     f.close()
-    return data
+    length = len(data)
+    return length, data
 
 
 def client():
@@ -155,11 +156,10 @@ def client():
         fileSizeReq = decryAES(encryptedFileSizeReq, sym_key)
         print(fileSizeReq)
 
-        # Call getFile function to read in the file
-        data = getFile(fileName)
+        # Call getFileSize function to read in the file and get the file size
+        fileSize, data = getFileSize(fileName)
 
         # Send the file size to the server
-        fileSize = len(data)
         clientSocket.send(encryAES(str(fileSize), sym_key))
 
         # Get message from server on whether file is too big or not
@@ -173,19 +173,27 @@ def client():
             return
 
         # print(fileName)
-        f = open(fileName, "rb")
+        #readin = open(fileName, "r")
 
         packet = (int(fileSize) // 2048) + 1
+        #print("position in file: ", readin.tell())
+        #readin.seek(0)
+        print(packet)
+        current = 0
         while (packet != 0):
-            data = f.read(2048)
+            #data = readin.read(2048)
             print(data)
-            clientSocket.send(encryptFile(data, sym_key))
+            if ((current+2048) > fileSize):
+                clientSocket.sendall(encryAES(data[current:], sym_key))
+            else:
+                clientSocket.sendall(encryAES(data[current:current+2048], sym_key))
+                current += 2049
             packet -= 1
-        f.close()
+        #readin.close()
 
         # Send File to server
         print("Sending the file contents to server.")
-        clientSocket.send(encryptFile(data, sym_key))
+        #clientSocket.send(encryAES(data, sym_key))
 
         # Get the confirmation message and print it
         encryptedConfirmation = clientSocket.recv(2048)

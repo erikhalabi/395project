@@ -203,14 +203,15 @@ def server():
                     # length = len(data)
                     print("--------")
                     # Open file for writing and write the data to it
-                    f = open(filename, "wb")
+                    f = open(filename, "w")
                     # f.write(data)
                     print("--------")
                     packet = (int(fileSize) // 2048) + 1
                     print(packet)
+                    print(fileSize)
                     while (packet != 0):
                         encryptedData = connectionSocket.recv(2048)
-                        data = decryptFile(encryptedData, sym_key)
+                        data = decryAES(encryptedData, sym_key)
                         print(data)
                         f.write(data)
                         packet -= 1
