@@ -41,23 +41,6 @@ def decryAES(message, key):
     return Encodedmessage.decode('ascii')
 
 
-# Description: This will take the file and decrypt it becuase it is already in
-# bytes so it doesnt need to be decoded
-# Parameters: The contents of the file and the key
-# Return: The decrypted file data 
-def decryptFile(data, key):
-    # Generate Cyphering
-    cipher = AES.new(key, AES.MODE_ECB)
-
-    # Decrypt message
-    paddedData = cipher.decrypt(data)
-
-    # Remove padding
-    data = unpad(paddedData, 16)
-
-    return data
-
-
 # This is the RSA encrypting function, using the public key.
 # It takes 2 paramters: The message to be encrypted
 # and the client name(or server) and it gets the key form the
@@ -195,36 +178,28 @@ def server():
                     connectionSocket.send(encryAES(fileSizeMsg, sym_key))
                     print("Uploading data from:", clientNameDecry)
 
-                    # Receive file data from client and decode it
-                    # encryptedData = connectionSocket.recv(2048)
-                    # data = decryptFile(encryptedData, sym_key)
-
-                    # Initialize the length of the file
-                    # length = len(data)
-                    print("--------")
-                    # Open file for writing and write the data to it
+                    # Open file for writing
                     f = open(filename, "w")
-                    # f.write(data)
-                    print("--------")
+
+                    # Determine the number of packets
                     packet = (int(fileSize) // 2048) + 1
-                    print(packet)
-                    print(fileSize)
+
+                    # While there are more packets to receive keep getting the file
+                    # contents and write it to the file
                     while (packet != 0):
+                        # Get file content form client
                         encryptedData = connectionSocket.recv(2048)
                         data = decryAES(encryptedData, sym_key)
-                        print(data)
+                        # Write to the file
                         f.write(data)
+                        # Reduce number of packets
                         packet -= 1
-                    # If there is anymore data to get collect it and write it to the file
-                    # while (length < int(fileSize)):
-                    #     encryptedData = connectionSocket.recv(2048)
-                    #     data = decryptFile(encryptedData, sym_key)
-                    #     f.write(data)  # Write to the file
-                    #     length += len(data)  # add to length
-                    # Closes the file
+                    # Close the file
                     f.close()
 
+                    # Confirmation of the file being saved message printed on screen
                     print("Upload complete from:", clientNameDecry + ". Terminating Connection.")
+                    # Send the confirmation message to client
                     confirmation = "The file is saved."
                     connectionSocket.send(encryAES(confirmation, sym_key))
 

@@ -25,19 +25,6 @@ def encryAES(message, key):
     return ct_bytes
 
 
-# Description: This will encrypt the file since the file is already encoded in bytes
-# Parameters: the file contents and the key
-# Return: The encypted file contents 
-def encryptFile(data, key):
-    # Generate Cyphering Block
-    cipher = AES.new(key, AES.MODE_ECB)
-
-    # Encrypt the message
-    ct_bytes = cipher.encrypt(pad(data, 16))
-
-    return ct_bytes
-
-
 def decryAES(message, key):
     # Generate ciphering
     cipher = AES.new(key, AES.MODE_ECB)
@@ -172,28 +159,29 @@ def client():
             clientSocket.close()
             return
 
-        # print(fileName)
-        #readin = open(fileName, "r")
-
-        packet = (int(fileSize) // 2048) + 1
-        #print("position in file: ", readin.tell())
-        #readin.seek(0)
-        print(packet)
-        current = 0
-        while (packet != 0):
-            #data = readin.read(2048)
-            print(data)
-            if ((current+2048) > fileSize):
-                clientSocket.sendall(encryAES(data[current:], sym_key))
-            else:
-                clientSocket.sendall(encryAES(data[current:current+2048], sym_key))
-                current += 2049
-            packet -= 1
-        #readin.close()
-
         # Send File to server
         print("Sending the file contents to server.")
-        #clientSocket.send(encryAES(data, sym_key))
+
+        # Determine the number of packets
+        packet = (int(fileSize) // 2048) + 1
+
+        # Initialize the file location
+        current = 0
+
+        # While there are more packets to send keep sending the file
+        # contents to the server
+        while (packet != 0):
+            # When we reach the last packet to send just send from current location to end
+            if ((current+2048) > fileSize):
+                clientSocket.sendall(encryAES(data[current:], sym_key))
+            # send only 2048 bytes to the server
+            else:
+                # Determine the conents to send then send
+                clientSocket.sendall(encryAES(data[current:current+2048], sym_key))
+                # mark current file location as 1 plus 2048
+                current += 2049
+            # Reduce the packet number
+            packet -= 1
 
         # Get the confirmation message and print it
         encryptedConfirmation = clientSocket.recv(2048)
