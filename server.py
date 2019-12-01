@@ -208,7 +208,7 @@ def server():
 
                     # If there is anymore data to get collect it and write it to the file
                     while (length < int(fileSize)):
-                        encryptedData = connectionSocket.recv(2048)
+                        encryptedData = connectionSocket.recv(4096)
                         data = decryptFile(encryptedData, sym_key)
                         f.write(data)  # Write to the file
                         length += len(data)  # add to length
