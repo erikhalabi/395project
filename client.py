@@ -163,7 +163,7 @@ def client():
         print("Sending the file contents to server.")
 
         # Determine the number of packets
-        packet = (int(fileSize) // 2048) + 1
+        packet = (int(fileSize) // 2000) + 1
 
         # Initialize the file location
         current = 0
@@ -172,14 +172,15 @@ def client():
         # contents to the server
         while (packet != 0):
             # When we reach the last packet to send just send from current location to end
-            if ((current+2048) > fileSize):
+            if (packet == 1):
                 clientSocket.sendall(encryAES(data[current:], sym_key))
-            # send only 2048 bytes to the server
+                print(data[current:])
+            # send only 2000 bytes to the server
             else:
-                # Determine the conents to send then send
-                clientSocket.sendall(encryAES(data[current:current+2048], sym_key))
-                # mark current file location as 1 plus 2048
-                current += 2049
+                # Determine the contents to send then send
+                clientSocket.sendall(encryAES(data[current:current+2000], sym_key))
+                # mark current file location as 1 plus the amount sent
+                current += 2001
             # Reduce the packet number
             packet -= 1
 

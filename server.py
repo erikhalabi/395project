@@ -151,7 +151,7 @@ def server():
                 # Server receives filename.
                 filenameEncry = connectionSocket.recv(2048)
                 filename = decryAES(filenameEncry, sym_key)
-                print("The Server recieved file name", filename, "from client:", clientNameDecry)
+                print("The Server received file name", filename, "from client:", clientNameDecry)
 
                 # Send encrypted message to client
                 reqFileSize = "Server Requested file size"
@@ -182,18 +182,19 @@ def server():
                     f = open(filename, "w")
 
                     # Determine the number of packets
-                    packet = (int(fileSize) // 2048) + 1
-
+                    packet = (int(fileSize) // 2000) + 1
+                    print("Number of packets: ", packet)
                     # While there are more packets to receive keep getting the file
                     # contents and write it to the file
                     while (packet != 0):
-                        # Get file content form client
-                        encryptedData = connectionSocket.recv(2048)
+                        # Get file content from client
+                        encryptedData = connectionSocket.recv(4096)
                         data = decryAES(encryptedData, sym_key)
                         # Write to the file
                         f.write(data)
                         # Reduce number of packets
                         packet -= 1
+                        print(packet)
                     # Close the file
                     f.close()
 
