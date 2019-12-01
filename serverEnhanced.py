@@ -6,6 +6,7 @@
 import socket
 import sys
 import os
+import hashlib
 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
@@ -39,6 +40,23 @@ def decryAES(message, key):
     Encodedmessage = unpad(padded_message, 16)
 
     return Encodedmessage.decode('ascii')
+
+
+# Description: This will take the file and decrypt it becuase it is already in
+# bytes so it doesnt need to be decoded
+# Parameters: The contents of the file and the key
+# Return: The decrypted file data 
+def decryptFile(data, key):
+    # Generate Cyphering
+    cipher = AES.new(key, AES.MODE_ECB)
+
+    # Decrypt message
+    paddedData = cipher.decrypt(data)
+
+    # Remove padding
+    data = unpad(paddedData, 16)
+
+    return data
 
 
 # This is the RSA encrypting function, using the public key.
@@ -121,14 +139,19 @@ def server():
                 clientName = connectionSocket.recv(2048)
                 clientNameDecry = decryRSA(clientName, "server")
 
-                if clientNameDecry in validList:
+                # split the contents of the name into name and hash
+                clientNameDecryArr = clientNameDecry.split('|')
+                ownHash = (hashlib.sha512(clientNameDecryArr[0].encode())).hexdigest()
+
+                # Server computes hash itself and checks if its the same as the clients
+                if (clientNameDecryArr[0] in validList) and (ownHash == clientNameDecryArr[1]):
                     connectionSocket.send("Valid".encode('ascii'))
                 # The client name is not valid,
                 # Appropriate message is sent to client and connection is
                 # terminated
                 else:
                     connectionSocket.send("Invalid clientName".encode('ascii'))
-                    print("The received client", clientNameDecry, "is invalid (Connection Terminated.)")
+                    print("The received client", clientNameDecryArr[0], "is invalid (Connection Terminated.)")
                     connectionSocket.close()
                     return
 
@@ -138,9 +161,11 @@ def server():
                 # client public key and sent to the client.
                 KeyLen = 256
                 sym_key = get_random_bytes(int(KeyLen / 8))
-                sym_key_Encry = encryRSA(sym_key, clientNameDecry)
+                sym_key_Encry = encryRSA(sym_key, clientNameDecryArr[0])
+
+
                 connectionSocket.send(sym_key_Encry)
-                print("Connection Accepted and Symmetric Key Generated for client:", clientNameDecry)
+                print("Connection Accepted and Symmetric Key Generated for client:", clientNameDecryArr[0])
 
                 # Server sends message to client, asking for file name.
                 # Message is encrypted using AES.
@@ -151,7 +176,22 @@ def server():
                 # Server receives filename.
                 filenameEncry = connectionSocket.recv(2048)
                 filename = decryAES(filenameEncry, sym_key)
-                print("The Server received file name", filename, "from client:", clientNameDecry)
+
+                # split the contents of the name into file name and hash
+                fileNameDecryArr = clientNameDecry.split('|')
+                ownHash = (hashlib.sha512(fileNameDecryArr[0].encode())).hexdigest()
+
+                # Server computes hash itself and checks if its the same as the clients
+                if (ownHash == fileNameDecryArr[1]):
+                    print("The Server recieved file name", fileNameDecryArr[0], "from client:", clientNameDecryArr[0])
+                # The file name has been modified,
+                # Appropriate message is sent to client and connection is
+                # terminated
+                else:
+                    connectionSocket.send("Faulty filename".encode('ascii'))
+                    print("Faulty filename (Connection Terminated).")
+                    connectionSocket.close()
+                    return
 
                 # Send encrypted message to client
                 reqFileSize = "Server Requested file size"
@@ -169,18 +209,21 @@ def server():
                     connectionSocket.send(encryAES(fileSizeMsg, sym_key))
 
                     # Close the connection and print a message
-                    print("File size exceeds the threshold. Terminating connection with", clientNameDecry)
+                    print("File size exceeds the threshold. Terminating connection with", clientNameDecryArr[0])
                     connectionSocket.close()
                     return
                 else:
                     # Send encrypted message to client that file size if within limit
                     fileSizeMsg = "The file size is OK."
                     connectionSocket.send(encryAES(fileSizeMsg, sym_key))
-                    print("Uploading data from:", clientNameDecry)
+                    print("Uploading data from:", clientNameDecryArr[0])
 
-                    # Open file for writing
-                    f = open(filename, "w")
+                    # Open file for writing and write the data to it
+                    f = open(fileNameDecryArr[0], "w")
 
+                    # Create list for hashes
+                    fileHashRecv = []
+                    fileHashCreate = []
                     # Determine the number of packets
                     packet = (int(fileSize) // 2048) + 1
                     # While there are more packets to receive keep getting the file
@@ -189,6 +232,12 @@ def server():
                         # Get file content from client
                         encryptedData = connectionSocket.recv(4096)
                         data = decryAES(encryptedData, sym_key)
+                        # Get the hashes, decrypt them, and append to the list
+                        encryptedHash = connectionSocket.recv(2048)
+                        fileHash = decryAES(encryptedHash, sym_key)
+                        fileHashRecv.append(fileHash)
+                        # Create a file hash with data received
+                        fileHashCreate.append((hashlib.sha512(data)).hexdigest())
                         # Write to the file
                         f.write(data)
                         # Reduce number of packets
@@ -196,9 +245,23 @@ def server():
                     # Close the file
                     f.close()
 
-                    # Confirmation of the file being saved message printed on screen
-                    print("Upload complete from:", clientNameDecry + ". Terminating Connection.")
-                    # Send the confirmation message to client
+                    # Go through each hash and compare to the ones created
+                    for recvHash in fileHashRecv:
+                        for createdHash in fileHashCreate:
+                            # Server computes hash itself and checks if its the same as the clients
+                            if (recvHash == createdHash):
+                                print("The Server received file", fileNameDecryArr[0], "from client:",
+                                      clientNameDecryArr[0])
+                            # The file has been modified,
+                            # Appropriate message is sent to client and connection is
+                            # terminated
+                            else:
+                                connectionSocket.send("Faulty file".encode('ascii'))
+                                print("Faulty file (Connection Terminated).")
+                                connectionSocket.close()
+                                return
+
+                    print("Upload complete from:", clientNameDecryArr[0] + ". Terminating Connection.")
                     confirmation = "The file is saved."
                     connectionSocket.send(encryAES(confirmation, sym_key))
 

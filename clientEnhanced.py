@@ -5,6 +5,7 @@
 
 import socket
 import sys
+import hashlib
 
 from Crypto.Cipher import AES
 from Crypto.PublicKey import RSA
@@ -21,6 +22,19 @@ def encryAES(message, key):
 
     # Encrypt the message
     ct_bytes = cipher.encrypt(pad(message.encode('ascii'), 16))
+
+    return ct_bytes
+
+
+# Description: This will encrypt the file since the file is already encoded in bytes
+# Parameters: the file contents and the key
+# Return: The encrypted file contents
+def encryptFile(data, key):
+    # Generate Cyphering Block
+    cipher = AES.new(key, AES.MODE_ECB)
+
+    # Encrypt the message
+    ct_bytes = cipher.encrypt(pad(data, 16))
 
     return ct_bytes
 
@@ -73,7 +87,7 @@ def decryRSA(message, clientName):
 
 # Description: It will get a file, read it in binary, then close it
 # Parameters: File name to get as string
-# Return: The file contents 
+# Return: The length of the file and the file contents
 def getFileSize(fileName):
     f = open(fileName, "r")
     data = f.read()
@@ -107,9 +121,15 @@ def client():
 
         # Client sends name to server
         clientName = input("Enter client name: ")
+
+        # Add hash value to message being sent
+        hashValue = hashlib.sha512(clientName.encode())
+        clientName = clientName + "|" + hashValue.hexdigest()
+
+        # Send message
         clientNameEncry = encryRSA(clientName, "server")
         clientSocket.send(clientNameEncry)
-        print("Client name", clientName, "is sent to the server.")
+        print("Client name", clientName.split("|")[0], "is sent to the server.")
 
         # Client receives message from server.
         # If the client name is not valid, the client with get the
@@ -124,7 +144,7 @@ def client():
         # The client receives the encrypted  sym_key form the server
         # and decrypts it.
         sym_key_Encry = clientSocket.recv(2048)
-        sym_key = decryRSA(sym_key_Encry, clientName)
+        sym_key = decryRSA(sym_key_Encry, clientName.split('|')[0])
         print("Received the symmetric key from the server.")
 
         # Client receives AES encrypted message from server, asking for filename.
@@ -135,6 +155,12 @@ def client():
 
         # Client inputs file name and sends to the server.
         fileName = input("")
+
+        # Add hash value to file message being sent
+        hashValue = hashlib.sha512(fileName.encode())
+        fileName = fileName + "|" + hashValue.hexdigest()
+
+        # Send message with hash, encrypted
         fileNameEncry = encryAES(fileName, sym_key)
         clientSocket.send(fileNameEncry)
 
@@ -143,8 +169,8 @@ def client():
         fileSizeReq = decryAES(encryptedFileSizeReq, sym_key)
         print(fileSizeReq)
 
-        # Call getFileSize function to read in the file and get the file size
-        fileSize, data = getFileSize(fileName)
+        # Call getFileSize function to read in the file
+        fileSize, data = getFileSize(fileName.split("|")[0])
 
         # Send the file size to the server
         clientSocket.send(encryAES(str(fileSize), sym_key))
@@ -173,11 +199,19 @@ def client():
         while (packet != 0):
             # When we reach the last packet to send just send from current location to end
             if ((current + 2048) > fileSize):
+                # Add hash value to file contents
+                hashValue = (hashlib.sha512(data[current:].encode())).hexdigest()
                 clientSocket.sendall(encryAES(data[current:], sym_key))
+                # Send the hash value
+                clientSocket.send(encryAES(hashValue, sym_key))
                 # break out of the loop once finished sending entire file
                 break
+            # Add hash value to file contents
+            hashValue = (hashlib.sha512(data[current:current + 2048].encode())).hexdigest()
             # Determine the contents to send then send
-            clientSocket.sendall(encryAES(data[current:current+2048], sym_key))
+            clientSocket.sendall(encryAES(data[current:current + 2048], sym_key))
+            # Send the hash value
+            clientSocket.send(encryAES(hashValue, sym_key))
             # mark current file location as 1 plus the amount sent previously
             current = current + 2049
             # Reduce the packet number
